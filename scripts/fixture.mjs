@@ -1,0 +1,13 @@
+import {createServer} from 'node:http';
+const page = `<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebTrace Lab</title><style>body{font:18px system-ui;background:#f1f6f4;padding:24px}a,button{display:block;margin:18px 0;padding:16px;background:#c5efdd;color:#123;border:0;border-radius:10px;font:inherit}</style><h1>WebTrace Lab</h1><p>Локальный сайт для проверки записи.</p><a href="demoapp://product/42?source=webtrace">Открыть диплинк</a><button onclick="fetch('/api').then(r=>r.json()).then(d=>document.getElementById('result').textContent=JSON.stringify(d))">Запросить API</button><a href="/immediate">Мгновенный диплинк</a><a href="/expired">Просроченная ссылка</a><pre id="result"></pre><script>const script=document.createElement('script');script.src='http://'+location.hostname+':8766/cdn.js';document.head.appendChild(script);setInterval(function poll(){console.log('tick')},3000)</script></html>`;
+createServer((req,res)=>{
+ if(req.url==='/api'){res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:true,deeplink:'labapp://offer/7'}));}
+ else if(req.url==='/big.js'){res.setHeader('content-type','application/javascript');res.end('/*'+'x'.repeat(900000)+'*/window.largeAsset=1;/* afterlimitbank://offer/900 */');}
+ else if(req.url==='/status'){res.setHeader('content-type','application/json');res.end(JSON.stringify({status:'canceled'}));}
+ else if(req.url==='/canceled'){res.setHeader('content-type','text/html; charset=utf-8');res.end('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script src="/big.js"></script><h1 id="status">Загрузка</h1><script>history.replaceState({},"","/banks");fetch("/status").then(r=>r.json()).then(v=>{document.getElementById("status").textContent=v.status;history.pushState({},"","/payment-result")});setInterval(function poll(){fetch("/status")},5000)</script>');}
+ else if(req.url==='/immediate'){res.setHeader('content-type','text/html');res.end('<script>location.href="instantapp://launch/123?token=fixture"</script><h1>Попытка перехода</h1>');}
+ else if(req.url==='/expired'){res.writeHead(410,{'content-type':'text/html'});res.end('<meta name="viewport" content="width=device-width,initial-scale=1"><h1>Ссылка истекла</h1><a href="recoverapp://renew/42">Обновить</a>');}
+ else {res.setHeader('content-type','text/html');res.end(page);}
+}).listen(8765,'0.0.0.0',()=>console.log('Fixture: http://127.0.0.1:8765 (Android emulator: http://10.0.2.2:8765)'));
+
+createServer((req,res)=>{res.setHeader('content-type','text/javascript');res.end('window.cdnValue=42;/* cdnapp://product/777 */');}).listen(8766,'0.0.0.0');
